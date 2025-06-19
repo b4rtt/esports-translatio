@@ -336,8 +336,8 @@ export default function Home() {
     
     setLoading(true);
     try {
-      // Split JSON into small chunks (3 keys each)
-      const chunks = chunkObject(jsonData, 3);
+      // Split JSON into small chunks (1 keys each)
+      const chunks = chunkObject(jsonData, 1);
       console.log(`Splitting into ${chunks.length} chunks for translation`);
       
       // Initialize progress

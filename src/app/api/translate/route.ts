@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { type ChatCompletionMessageParam, type ChatCompletion } from "openai/resources/chat/completions";
+import { type ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { OpenAI } from "openai";
 
 // Vercel runtime configuration for Hobby plan

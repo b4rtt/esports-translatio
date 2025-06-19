@@ -313,8 +313,8 @@ export default function Home() {
     try {
       const jsonData = JSON.parse(text);
       const keyCount = Object.keys(jsonData).length;
-      if (keyCount > 150) {
-        setError("File too large for Vercel deployment. Please use a JSON file with fewer than 150 keys.");
+      if (keyCount > 5) {
+        setError("File too large for Vercel Hobby plan. Please use a JSON file with max 5 keys, or upgrade to Vercel Pro for larger files.");
         return;
       }
     } catch (parseError) {

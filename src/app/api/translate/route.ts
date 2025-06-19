@@ -2,14 +2,14 @@ import { NextResponse } from "next/server";
 import { type ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { OpenAI } from "openai";
 
-// Vercel runtime configuration
+// Vercel runtime configuration for Hobby plan
 export const runtime = 'nodejs';
-export const maxDuration = 300; // 5 minutes
+export const maxDuration = 60; // 60 seconds (Hobby plan limit)
 
-// Add timeout configuration optimized for Vercel
-const REQUEST_TIMEOUT = 90000; // 1.5 minutes per request (reduced for Vercel)
-const MAX_RETRIES = 1; // Keep retries minimal to save time
-const VERCEL_CHUNK_DELAY = 1000; // 1 second delay between chunks on Vercel
+// Add timeout configuration for Vercel Hobby plan
+const REQUEST_TIMEOUT = 45000; // 45 seconds per request (must fit in 60s total)
+const MAX_RETRIES = 0; // No retries to save time
+const VERCEL_CHUNK_DELAY = 500; // 0.5 second delay between chunks
 
 export async function POST(request: Request) {
   try {
@@ -154,10 +154,10 @@ ${jsonChunk}`,
     
     console.log(`Processing ${chunks.length} chunks for translation`);
     
-    // More conservative limit for Vercel
-    if (chunks.length > 30) {
+    // Very strict limit for Vercel Hobby plan (60s total)
+    if (chunks.length > 1) {
       return NextResponse.json(
-        { error: "File too large for Vercel deployment. Please use a smaller JSON file (max ~150 keys)." },
+        { error: "File too large for Vercel Hobby plan. Only 1 small chunk allowed (max ~5 keys). Upgrade to Pro plan for larger files." },
         { status: 413 }
       );
     }

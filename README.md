@@ -47,11 +47,12 @@ bun dev
 
 Upload an i18n JSON file, describe your app, and pick a target language. The translated file will be downloaded automatically.
 
-**Important Limitations:**
-- Maximum 150 JSON keys per file (optimized for Vercel deployment)
+**Important Limitations (Vercel Hobby Plan):**
+- Maximum 5 JSON keys per file (due to 60-second Vercel Hobby limit)
 - Files larger than this will be rejected with a helpful error message
-- Translation timeout is set to 1.5 minutes per request (5 minutes total)
-- Vercel has stricter limits than local development
+- Translation timeout is set to 45 seconds per request (60 seconds total)
+- **To translate larger files, upgrade to Vercel Pro plan ($20/month)**
+- Local development supports much larger files
 
 ## Deployment
 

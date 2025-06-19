@@ -67,7 +67,7 @@ ${json}`,
     try {
       JSON.parse(result);
     } catch (parseError) {
-      console.error("Invalid JSON from AI:", result);
+      console.error("Invalid JSON from AI:", result, parseError);
       return NextResponse.json(
         { error: "AI returned invalid JSON format" },
         { status: 422 }

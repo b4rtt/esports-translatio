@@ -548,17 +548,58 @@ export default function Home() {
             value={options.find((o) => o.label === language)}
             onChange={(o: OptionType | null) => o && setLanguage(o.label)}
             isSearchable
+            menuPlacement="auto"
             className="text-black dark:text-white"
             styles={{
-              control: (base) => ({
+              control: (base, state) => ({
                 ...base,
                 borderRadius: '0.375rem',
-                borderColor: '#d1d5db',
+                borderColor: document.documentElement.classList.contains('dark') ? '#374151' : '#d1d5db',
+                backgroundColor: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
                 minHeight: '42px',
+                boxShadow: state.isFocused ? (document.documentElement.classList.contains('dark') ? '0 0 0 1px #3b82f6' : '0 0 0 1px #3b82f6') : 'none',
                 '&:hover': {
-                  borderColor: '#9ca3af'
+                  borderColor: document.documentElement.classList.contains('dark') ? '#4b5563' : '#9ca3af'
                 }
-              })
+              }),
+              menu: (base) => ({
+                ...base,
+                backgroundColor: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+                border: document.documentElement.classList.contains('dark') ? '1px solid #374151' : '1px solid #d1d5db',
+              }),
+              option: (base, state) => ({
+                ...base,
+                backgroundColor: state.isFocused 
+                  ? (document.documentElement.classList.contains('dark') ? '#374151' : '#f3f4f6')
+                  : (document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'),
+                color: document.documentElement.classList.contains('dark') ? '#f9fafb' : '#111827',
+                '&:hover': {
+                  backgroundColor: document.documentElement.classList.contains('dark') ? '#374151' : '#f3f4f6',
+                }
+              }),
+              singleValue: (base) => ({
+                ...base,
+                color: document.documentElement.classList.contains('dark') ? '#f9fafb' : '#111827',
+              }),
+              input: (base) => ({
+                ...base,
+                color: document.documentElement.classList.contains('dark') ? '#f9fafb' : '#111827',
+              }),
+              placeholder: (base) => ({
+                ...base,
+                color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
+              }),
+              indicatorSeparator: (base) => ({
+                ...base,
+                backgroundColor: document.documentElement.classList.contains('dark') ? '#374151' : '#d1d5db',
+              }),
+              dropdownIndicator: (base) => ({
+                ...base,
+                color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
+                '&:hover': {
+                  color: document.documentElement.classList.contains('dark') ? '#f9fafb' : '#111827',
+                }
+              }),
             }}
             formatOptionLabel={(o: OptionType) => {
               const Flag = o.countryCode ? Flags[o.countryCode as keyof typeof Flags] : null;
@@ -598,6 +639,30 @@ export default function Home() {
                 : "Translate"
           }
         </button>
+        
+        {/* Progress Bar */}
+        {(loading || success) && progress.total > 0 && (
+          <div className="w-full space-y-2">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
+              <div 
+                className={`h-full transition-all duration-500 ease-out ${
+                  success ? 'bg-green-500' : 'bg-[#f60]'
+                }`}
+                style={{ 
+                  width: `${Math.round((progress.current / progress.total) * 100)}%` 
+                }}
+              />
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span>
+                {success ? 'Completed' : 'Progress'}
+              </span>
+              <span>
+                {progress.current}/{progress.total} chunks ({Math.round((progress.current / progress.total) * 100)}%)
+              </span>
+            </div>
+          </div>
+        )}
         
         {error && (
           <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">

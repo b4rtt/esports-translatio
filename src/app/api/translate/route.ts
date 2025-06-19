@@ -9,7 +9,6 @@ export const maxDuration = 60; // 60 seconds (Hobby plan limit)
 // Add timeout configuration for Vercel Hobby plan
 const REQUEST_TIMEOUT = 45000; // 45 seconds per request (must fit in 60s total)
 const MAX_RETRIES = 0; // No retries to save time
-const VERCEL_CHUNK_DELAY = 500; // 0.5 second delay between chunks
 
 export async function POST(request: Request) {
   try {

@@ -262,6 +262,8 @@ export default function Home() {
   const [error, setError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -316,6 +318,7 @@ export default function Home() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setSuccess(false);
     if (!file) {
       setError("Please upload a JSON file.");
       return;
@@ -336,6 +339,9 @@ export default function Home() {
       // Split JSON into small chunks (3 keys each)
       const chunks = chunkObject(jsonData, 3);
       console.log(`Splitting into ${chunks.length} chunks for translation`);
+      
+      // Initialize progress
+      setProgress({ current: 0, total: chunks.length });
       
       const translatedChunks: Record<string, unknown>[] = [];
       
@@ -364,9 +370,9 @@ export default function Home() {
           const translatedChunk = JSON.parse(data.result);
           translatedChunks.push(translatedChunk);
           
-          // Update progress (could add a progress bar here)
-          const progress = Math.round(((i + 1) / chunks.length) * 100);
-          console.log(`Translation progress: ${progress}%`);
+          // Update progress
+          setProgress({ current: i + 1, total: chunks.length });
+          console.log(`Translation progress: ${i + 1}/${chunks.length}`);
           
         } catch (chunkError) {
           console.error(`Failed to translate chunk ${i + 1}:`, chunkError);
@@ -393,6 +399,14 @@ export default function Home() {
       a.click();
       URL.revokeObjectURL(url);
       
+      // Show success state
+      setSuccess(true);
+      
+      // Reset success state after 3 seconds
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
+      
     } catch (error) {
       console.error(error);
       if (error instanceof TypeError && error.message.includes('fetch')) {
@@ -402,6 +416,7 @@ export default function Home() {
       }
     } finally {
       setLoading(false);
+      setProgress({ current: 0, total: 0 });
     }
   }
 
@@ -574,7 +589,14 @@ export default function Home() {
           {loading && (
             <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
           )}
-          {loading ? "Translating..." : "Translate"}
+          {success 
+            ? "✓ Translation Complete!" 
+            : loading && progress.total > 0 
+              ? `Translating ${progress.current}/${progress.total}...` 
+              : loading 
+                ? "Translating..." 
+                : "Translate"
+          }
         </button>
         
         {error && (

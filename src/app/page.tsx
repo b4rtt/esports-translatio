@@ -308,15 +308,10 @@ export default function Home() {
       return;
     }
     
-    // Validate file size (roughly estimate JSON complexity)
+    // Validate JSON format only
     const text = await file.text();
     try {
-      const jsonData = JSON.parse(text);
-      const keyCount = Object.keys(jsonData).length;
-      if (keyCount > 60) {
-        setError("File too large for Vercel Hobby plan. Please use a JSON file with max 60 keys, or upgrade to Vercel Pro for larger files.");
-        return;
-      }
+      JSON.parse(text); // Just validate it's valid JSON
     } catch {
       setError("Invalid JSON file. Please check your file format.");
       return;

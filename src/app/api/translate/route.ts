@@ -39,7 +39,7 @@ export async function POST(request: Request) {
         const entrySize = JSON.stringify([key, value]).length;
         
         // If adding this entry would exceed maxSize, start a new chunk
-        if (currentChunk.length > 0 && (currentChunkSize + entrySize > maxSize * 100 || currentChunk.length >= 10)) {
+        if (currentChunk.length > 0 && (currentChunkSize + entrySize > maxSize * 50 || currentChunk.length >= maxSize)) {
           chunks.push(Object.fromEntries(currentChunk));
           currentChunk = [];
           currentChunkSize = 0;
@@ -150,18 +150,10 @@ ${jsonChunk}`,
 
     const data = JSON.parse(json);
     
-    // Create reasonable chunks for Vercel Hobby plan (60s total)
-    const chunks = chunkObject(data, 20); // 20 keys per chunk should take ~15s each
+    // Create SMALL chunks - each OpenAI request will be tiny and fast
+    const chunks = chunkObject(data, 3); // Only 3 keys per chunk = ~3-5s per request
     
-    console.log(`Processing ${chunks.length} chunks for translation`);
-    
-    // Realistic limit for Vercel Hobby plan: 3-4 chunks × 15s = ~60s total
-    if (chunks.length > 3) {
-      return NextResponse.json(
-        { error: `File too large for Vercel Hobby plan. ${chunks.length} chunks detected, max 3 allowed (~60 keys total). Split file or upgrade to Pro plan.` },
-        { status: 413 }
-      );
-    }
+    console.log(`Processing ${chunks.length} chunks for translation. Each chunk ~3-5 seconds.`);
 
     const combined: Record<string, unknown> = {};
 

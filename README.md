@@ -47,12 +47,13 @@ bun dev
 
 Upload an i18n JSON file, describe your app, and pick a target language. The translated file will be downloaded automatically.
 
-**Important Limitations (Vercel Hobby Plan):**
-- Maximum 60 JSON keys per file (processed in 3 chunks of ~20 keys each)
-- Each chunk takes ~15-20 seconds, fitting within 60-second Hobby limit
-- Files larger than this will be rejected with a helpful error message
-- **To translate larger files, upgrade to Vercel Pro plan ($20/month)**
-- Local development supports much larger files
+**How It Works:**
+- JSON files are automatically split into small chunks of 3 keys each
+- Each chunk is translated separately in ~3-5 seconds
+- No file size limits - chunking handles files of any size!
+- Progress is shown in real-time as chunks are processed
+- **Vercel Hobby Plan**: Works great for most files, just takes longer for huge files
+- **Vercel Pro Plan ($20/month)**: Faster processing with 5-minute timeout
 
 ## Deployment
 
@@ -110,27 +111,25 @@ Translates a JSON file to the specified language.
 ## Vercel Deployment Limitations
 
 **Vercel Hobby Plan:**
-- Maximum 60 JSON keys per file (3 chunks × 20 keys)
 - 60-second function timeout
-- Each chunk processed sequentially
+- Files are processed chunk by chunk (3 keys each)
+- Larger files may timeout if they have too many chunks
 
 **Vercel Pro Plan ($20/month):**
-- Maximum 500+ JSON keys per file
-- 300-second function timeout
-- Much better for larger translations
+- 300-second function timeout  
+- Can handle much larger files without timeout
+- Recommended for production use with large translation files
 
-**Workarounds for Hobby Plan:**
-1. **Split large JSON files** into smaller chunks of 5 keys each
-2. **Use local development** for larger files (`npm run dev`)
-3. **Upgrade to Vercel Pro** for production use
-4. **Use the app multiple times** - translate 5 keys at a time and merge results
+**Performance:**
+- Small files (< 50 keys): ~30 seconds
+- Medium files (100-200 keys): Will work on Hobby plan but may timeout
+- Large files (500+ keys): Recommend Pro plan or local development
 
 **Troubleshooting:**
-1. Ensure your JSON files have max 60 keys for Hobby plan (processed in 3 chunks)
-2. Check that your OpenAI API key is properly set in Vercel dashboard
-3. Monitor Vercel function logs - you'll see "Processing chunk X/Y" progress
-4. Each chunk should complete in 15-20 seconds
-5. Consider local development for files > 60 keys
+1. Check that your OpenAI API key is properly set in Vercel dashboard
+2. Monitor Vercel function logs - you'll see "Processing chunk X/Y" progress
+3. Each chunk should complete in 3-5 seconds
+4. For very large files on Hobby plan, consider upgrading to Pro or use local development
 
 ## Learn More
 

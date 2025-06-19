@@ -2,9 +2,14 @@ import { NextResponse } from "next/server";
 import { type ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { OpenAI } from "openai";
 
-// Add timeout configuration
-const REQUEST_TIMEOUT = 120000; // 2 minutes per request (120 seconds)
+// Vercel runtime configuration
+export const runtime = 'nodejs';
+export const maxDuration = 300; // 5 minutes
+
+// Add timeout configuration optimized for Vercel
+const REQUEST_TIMEOUT = 90000; // 1.5 minutes per request (reduced for Vercel)
 const MAX_RETRIES = 1; // Keep retries minimal to save time
+const VERCEL_CHUNK_DELAY = 1000; // 1 second delay between chunks on Vercel
 
 export async function POST(request: Request) {
   try {
@@ -144,15 +149,15 @@ ${jsonChunk}`,
 
     const data = JSON.parse(json);
     
-    // Create smaller, content-aware chunks
-    const chunks = chunkObject(data, 10); // Much smaller chunks based on content size
+    // Create very small chunks for Vercel stability
+    const chunks = chunkObject(data, 5); // Even smaller chunks for Vercel
     
     console.log(`Processing ${chunks.length} chunks for translation`);
     
-    // Check if the request is too large
-    if (chunks.length > 50) {
+    // More conservative limit for Vercel
+    if (chunks.length > 30) {
       return NextResponse.json(
-        { error: "File too large. Please use a smaller JSON file or reduce content length." },
+        { error: "File too large for Vercel deployment. Please use a smaller JSON file (max ~150 keys)." },
         { status: 413 }
       );
     }
@@ -167,19 +172,28 @@ ${jsonChunk}`,
         console.log(`Processing chunk ${i + 1}/${chunks.length}`);
         
         try {
+          // Add progress logging for Vercel monitoring
+          const startTime = Date.now();
           const result = await translateChunkWithRetry(chunk);
+          const endTime = Date.now();
+          
+          console.log(`Chunk ${i + 1}/${chunks.length} completed in ${endTime - startTime}ms`);
           
           // Merge results
           Object.assign(combined, result);
           
-          // Small delay between chunks to avoid rate limiting
+          // Show progress percentage
+          const progress = Math.round(((i + 1) / chunks.length) * 100);
+          console.log(`Translation progress: ${progress}%`);
+          
+          // Small delay between chunks optimized for Vercel
           if (i < chunks.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+            await new Promise(resolve => setTimeout(resolve, VERCEL_CHUNK_DELAY));
           }
           
         } catch (chunkError) {
           console.error(`Failed to process chunk ${i + 1}:`, chunkError);
-          throw new Error(`Translation failed on chunk ${i + 1}/${chunks.length}`);
+          throw new Error(`Translation failed on chunk ${i + 1}/${chunks.length}: ${chunkError instanceof Error ? chunkError.message : 'Unknown error'}`);
         }
       }
     } catch (error) {

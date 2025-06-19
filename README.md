@@ -48,9 +48,10 @@ bun dev
 Upload an i18n JSON file, describe your app, and pick a target language. The translated file will be downloaded automatically.
 
 **Important Limitations:**
-- Maximum 1000 JSON keys per file (to prevent timeouts)
+- Maximum 150 JSON keys per file (optimized for Vercel deployment)
 - Files larger than this will be rejected with a helpful error message
-- Translation timeout is set to 2 minutes per request (5 minutes total)
+- Translation timeout is set to 1.5 minutes per request (5 minutes total)
+- Vercel has stricter limits than local development
 
 ## Deployment
 
@@ -102,12 +103,14 @@ Translates a JSON file to the specified language.
 
 ## Troubleshooting
 
-If you encounter deployment timeouts:
-1. Ensure your JSON files have fewer than 1000 keys
-2. Check that your OpenAI API key is properly set
-3. Verify you're using the latest deployment with timeout optimizations
-4. For very large files, consider splitting them into smaller chunks manually
-5. Be patient - OpenAI API responses can take up to 2 minutes per chunk
+If you encounter deployment timeouts on Vercel:
+1. Ensure your JSON files have fewer than 150 keys (Vercel limit)
+2. Check that your OpenAI API key is properly set in Vercel dashboard
+3. Verify you're using the latest deployment with Vercel optimizations
+4. For larger files, split them into smaller chunks manually (recommended: 50-100 keys max)
+5. Monitor Vercel function logs for progress updates
+6. Be patient - each small chunk takes ~30-60 seconds on Vercel
+7. Consider upgrading to Vercel Pro for better limits
 
 ## Learn More
 

@@ -14,6 +14,8 @@ const VERCEL_CHUNK_DELAY = 500; // 0.5 second delay between chunks
 export async function POST(request: Request) {
   try {
     const { json, language, prompt } = await request.json();
+    
+    // This API now expects a single SMALL chunk, not full JSON
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
@@ -27,35 +29,7 @@ export async function POST(request: Request) {
       timeout: REQUEST_TIMEOUT,
     });
 
-    function chunkObject(obj: Record<string, unknown>, maxSize: number) {
-      const entries = Object.entries(obj);
-      const chunks = [] as Record<string, unknown>[];
-      
-      // Create smaller chunks based on content size, not just key count
-      let currentChunk: Array<[string, unknown]> = [];
-      let currentChunkSize = 0;
-      
-      for (const [key, value] of entries) {
-        const entrySize = JSON.stringify([key, value]).length;
-        
-        // If adding this entry would exceed maxSize, start a new chunk
-        if (currentChunk.length > 0 && (currentChunkSize + entrySize > maxSize * 50 || currentChunk.length >= maxSize)) {
-          chunks.push(Object.fromEntries(currentChunk));
-          currentChunk = [];
-          currentChunkSize = 0;
-        }
-        
-        currentChunk.push([key, value]);
-        currentChunkSize += entrySize;
-      }
-      
-      // Add remaining entries as the last chunk
-      if (currentChunk.length > 0) {
-        chunks.push(Object.fromEntries(currentChunk));
-      }
-      
-      return chunks;
-    }
+
 
     function buildMessages(jsonChunk: string): ChatCompletionMessageParam[] {
       return [
@@ -148,52 +122,25 @@ ${jsonChunk}`,
       throw new Error("All retry attempts failed");
     }
 
-    const data = JSON.parse(json);
+    // Parse the single chunk (frontend sends one chunk at a time)
+    const chunk = JSON.parse(json);
     
-    // Create SMALL chunks - each OpenAI request will be tiny and fast
-    const chunks = chunkObject(data, 3); // Only 3 keys per chunk = ~3-5s per request
-    
-    console.log(`Processing ${chunks.length} chunks for translation. Each chunk ~3-5 seconds.`);
-
-    const combined: Record<string, unknown> = {};
+    console.log(`Processing single chunk with ${Object.keys(chunk).length} keys`);
 
     try {
-      // Process chunks sequentially for maximum stability
-      for (let i = 0; i < chunks.length; i++) {
-        const chunk = chunks[i];
-        
-        console.log(`Processing chunk ${i + 1}/${chunks.length}`);
-        
-        try {
-          // Add progress logging for Vercel monitoring
-          const startTime = Date.now();
-          const result = await translateChunkWithRetry(chunk);
-          const endTime = Date.now();
-          
-          console.log(`Chunk ${i + 1}/${chunks.length} completed in ${endTime - startTime}ms`);
-          
-          // Merge results
-          Object.assign(combined, result);
-          
-          // Show progress percentage
-          const progress = Math.round(((i + 1) / chunks.length) * 100);
-          console.log(`Translation progress: ${progress}%`);
-          
-          // Small delay between chunks optimized for Vercel
-          if (i < chunks.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, VERCEL_CHUNK_DELAY));
-          }
-          
-        } catch (chunkError) {
-          console.error(`Failed to process chunk ${i + 1}:`, chunkError);
-          throw new Error(`Translation failed on chunk ${i + 1}/${chunks.length}: ${chunkError instanceof Error ? chunkError.message : 'Unknown error'}`);
-        }
-      }
+      // Translate this single chunk
+      const startTime = Date.now();
+      const result = await translateChunkWithRetry(chunk);
+      const endTime = Date.now();
+      
+      console.log(`Chunk completed in ${endTime - startTime}ms`);
+      
+      return NextResponse.json({ result: JSON.stringify(result, null, 2) });
     } catch (error) {
       console.error("Translation error:", error);
       if (error instanceof Error && error.message.includes("timeout")) {
         return NextResponse.json(
-          { error: "Translation timed out. Please try with a smaller file." },
+          { error: "Translation timed out. Please try again." },
           { status: 408 }
         );
       }
@@ -202,8 +149,6 @@ ${jsonChunk}`,
         { status: 422 }
       );
     }
-
-    return NextResponse.json({ result: JSON.stringify(combined, null, 2) });
   } catch (error) {
     console.error("Request processing error:", error);
     return NextResponse.json(

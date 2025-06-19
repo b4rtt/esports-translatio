@@ -300,6 +300,19 @@ export default function Home() {
     }
   };
 
+  // Function to split JSON into chunks
+  function chunkObject(obj: Record<string, unknown>, chunkSize: number) {
+    const entries = Object.entries(obj);
+    const chunks = [] as Record<string, unknown>[];
+    
+    for (let i = 0; i < entries.length; i += chunkSize) {
+      const chunkEntries = entries.slice(i, i + chunkSize);
+      chunks.push(Object.fromEntries(chunkEntries));
+    }
+    
+    return chunks;
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -308,10 +321,11 @@ export default function Home() {
       return;
     }
     
-    // Validate JSON format only
+    // Parse and validate JSON
     const text = await file.text();
+    let jsonData: Record<string, unknown>;
     try {
-      JSON.parse(text); // Just validate it's valid JSON
+      jsonData = JSON.parse(text);
     } catch {
       setError("Invalid JSON file. Please check your file format.");
       return;
@@ -319,29 +333,55 @@ export default function Home() {
     
     setLoading(true);
     try {
-      const res = await fetch("/api/translate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ json: text, language, prompt }),
-      });
+      // Split JSON into small chunks (3 keys each)
+      const chunks = chunkObject(jsonData, 3);
+      console.log(`Splitting into ${chunks.length} chunks for translation`);
       
-      const data = await res.json();
+      const translatedChunks: Record<string, unknown>[] = [];
       
-      if (!res.ok) {
-        // Handle specific error types
-        if (res.status === 408) {
-          setError("Translation timed out. Please try with a smaller file or split it into smaller chunks.");
-        } else if (res.status === 413) {
-          setError("File too large. Please use a smaller JSON file.");
-        } else if (res.status === 422) {
-          setError(data.error || "Translation failed. Please try again.");
-        } else {
-          setError(data.error || "Request failed. Please try again.");
+      // Process each chunk separately with progress
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
+        console.log(`Processing chunk ${i + 1}/${chunks.length}`);
+        
+        try {
+          const res = await fetch("/api/translate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              json: JSON.stringify(chunk), 
+              language, 
+              prompt 
+            }),
+          });
+          
+          const data = await res.json();
+          
+          if (!res.ok) {
+            throw new Error(data.error || `Request failed for chunk ${i + 1}`);
+          }
+          
+          const translatedChunk = JSON.parse(data.result);
+          translatedChunks.push(translatedChunk);
+          
+          // Update progress (could add a progress bar here)
+          const progress = Math.round(((i + 1) / chunks.length) * 100);
+          console.log(`Translation progress: ${progress}%`);
+          
+        } catch (chunkError) {
+          console.error(`Failed to translate chunk ${i + 1}:`, chunkError);
+          setError(`Translation failed on chunk ${i + 1}/${chunks.length}. ${chunkError instanceof Error ? chunkError.message : 'Unknown error'}`);
+          return;
         }
-        return;
       }
       
-      const blob = new Blob([data.result], { type: "application/json" });
+      // Combine all translated chunks
+      const combinedResult = translatedChunks.reduce((acc, chunk) => {
+        return { ...acc, ...chunk };
+      }, {});
+      
+      // Download the result
+      const blob = new Blob([JSON.stringify(combinedResult, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -352,6 +392,7 @@ export default function Home() {
       
       a.click();
       URL.revokeObjectURL(url);
+      
     } catch (error) {
       console.error(error);
       if (error instanceof TypeError && error.message.includes('fetch')) {

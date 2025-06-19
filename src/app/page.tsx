@@ -50,7 +50,10 @@ export default function Home() {
 
   return (
     <div className="flex items-center justify-center min-h-screen p-6 bg-background text-foreground">
-      <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-md">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4 w-full max-w-md bg-background border border-foreground p-6 rounded-lg shadow-lg"
+      >
         <textarea
           className="w-full border rounded-md p-2 bg-transparent"
           rows={3}
@@ -78,8 +81,11 @@ export default function Home() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-foreground text-background py-2 rounded-md hover:opacity-80 disabled:opacity-50"
+          className="w-full bg-foreground text-background py-2 rounded-md hover:opacity-80 disabled:opacity-50 flex items-center justify-center gap-2"
         >
+          {loading && (
+            <span className="animate-spin rounded-full h-4 w-4 border-2 border-background border-t-transparent" />
+          )}
           {loading ? "Translating..." : "Translate"}
         </button>
         {error && <p className="text-red-500 text-sm">{error}</p>}

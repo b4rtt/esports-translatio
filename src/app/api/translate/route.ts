@@ -22,12 +22,33 @@ export async function POST(request: Request) {
       timeout: REQUEST_TIMEOUT,
     });
 
-    function chunkObject(obj: Record<string, unknown>, size: number) {
+    function chunkObject(obj: Record<string, unknown>, maxSize: number) {
       const entries = Object.entries(obj);
       const chunks = [] as Record<string, unknown>[];
-      for (let i = 0; i < entries.length; i += size) {
-        chunks.push(Object.fromEntries(entries.slice(i, i + size)));
+      
+      // Create smaller chunks based on content size, not just key count
+      let currentChunk: Array<[string, unknown]> = [];
+      let currentChunkSize = 0;
+      
+      for (const [key, value] of entries) {
+        const entrySize = JSON.stringify([key, value]).length;
+        
+        // If adding this entry would exceed maxSize, start a new chunk
+        if (currentChunk.length > 0 && (currentChunkSize + entrySize > maxSize * 100 || currentChunk.length >= 10)) {
+          chunks.push(Object.fromEntries(currentChunk));
+          currentChunk = [];
+          currentChunkSize = 0;
+        }
+        
+        currentChunk.push([key, value]);
+        currentChunkSize += entrySize;
       }
+      
+      // Add remaining entries as the last chunk
+      if (currentChunk.length > 0) {
+        chunks.push(Object.fromEntries(currentChunk));
+      }
+      
       return chunks;
     }
 
@@ -68,40 +89,54 @@ ${jsonChunk}`,
       ];
     }
 
-    // Add retry mechanism for individual API calls
-    async function translateChunkWithRetry(chunk: Record<string, unknown>, retries = MAX_RETRIES): Promise<Record<string, unknown>> {
+    // Simplified translation function with timeout
+    async function translateChunk(chunk: Record<string, unknown>): Promise<Record<string, unknown>> {
       const chunkJson = JSON.stringify(chunk);
       const messages = buildMessages(chunkJson);
       
-      for (let attempt = 0; attempt <= retries; attempt++) {
+      console.log(`Sending chunk to OpenAI (${chunkJson.length} characters)`);
+      
+      try {
+        const completion = await Promise.race([
+          openai.chat.completions.create({
+            model: "gpt-4o-mini", // Use faster model
+            messages,
+            temperature: 0.1, // Lower temperature for consistent results
+          }),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("OpenAI request timeout after 2 minutes")), REQUEST_TIMEOUT)
+          )
+        ]) as any;
+
+        let result = completion.choices[0]?.message?.content || "";
+
+        // Clean up the response - remove markdown formatting
+        result = result.trim();
+        result = result.replace(/^```json?\s*/, '').replace(/\s*```$/, '');
+        result = result.replace(/^```\s*/, '').replace(/\s*```$/, '');
+
+        const parsed = JSON.parse(result);
+        console.log(`Successfully translated chunk`);
+        return parsed;
+      } catch (error) {
+        console.error(`Translation failed for chunk:`, error);
+        throw error;
+      }
+    }
+
+    // Retry wrapper
+    async function translateChunkWithRetry(chunk: Record<string, unknown>): Promise<Record<string, unknown>> {
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          const completion = await Promise.race([
-            openai.chat.completions.create({
-              model: "gpt-4o-mini", // Use faster model to reduce timeout risk
-              messages,
-              temperature: 0.1, // Lower temperature for more consistent results
-            }),
-            new Promise((_, reject) => 
-              setTimeout(() => reject(new Error("Request timeout")), REQUEST_TIMEOUT)
-            )
-          ]) as any;
-
-          let result = completion.choices[0]?.message?.content || "";
-
-          // Clean up the response - remove markdown formatting and extra whitespace
-          result = result.trim();
-          result = result.replace(/^```json?\s*/, '').replace(/\s*```$/, '');
-          result = result.replace(/^```\s*/, '').replace(/\s*```$/, '');
-
-          const parsed = JSON.parse(result);
-          return parsed;
+          return await translateChunk(chunk);
         } catch (error) {
           console.error(`Attempt ${attempt + 1} failed:`, error);
-          if (attempt === retries) {
+          if (attempt === MAX_RETRIES) {
             throw error;
           }
-          // Wait before retry with exponential backoff
-          await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+          // Wait before retry
+          console.log(`Retrying in ${(attempt + 1) * 3} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, (attempt + 1) * 3000));
         }
       }
       throw new Error("All retry attempts failed");
@@ -109,13 +144,15 @@ ${jsonChunk}`,
 
     const data = JSON.parse(json);
     
-    // Optimize chunk size for 2-minute timeout
-    const chunks = chunkObject(data, 40); // Increased back to handle more keys per chunk
+    // Create smaller, content-aware chunks
+    const chunks = chunkObject(data, 10); // Much smaller chunks based on content size
     
-    // Check if the request is too large (increased with longer timeout)
-    if (chunks.length > 25) {
+    console.log(`Processing ${chunks.length} chunks for translation`);
+    
+    // Check if the request is too large
+    if (chunks.length > 50) {
       return NextResponse.json(
-        { error: "File too large. Please use a smaller JSON file (max ~1000 keys)." },
+        { error: "File too large. Please use a smaller JSON file or reduce content length." },
         { status: 413 }
       );
     }
@@ -123,32 +160,26 @@ ${jsonChunk}`,
     const combined: Record<string, unknown> = {};
 
     try {
-      // Process chunks with more conservative concurrency
-      const CONCURRENT_REQUESTS = 2; // Reduced from 3 to 2
-      
-      for (let i = 0; i < chunks.length; i += CONCURRENT_REQUESTS) {
-        const batch = chunks.slice(i, i + CONCURRENT_REQUESTS);
+      // Process chunks sequentially for maximum stability
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
         
-        // Process with timeout for the entire batch
-        const batchPromise = Promise.all(
-          batch.map(chunk => translateChunkWithRetry(chunk))
-        );
+        console.log(`Processing chunk ${i + 1}/${chunks.length}`);
         
-        const results = await Promise.race([
-          batchPromise,
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("Batch timeout")), REQUEST_TIMEOUT)
-          )
-        ]) as any[];
-        
-        // Merge results
-        results.forEach(result => {
+        try {
+          const result = await translateChunkWithRetry(chunk);
+          
+          // Merge results
           Object.assign(combined, result);
-        });
-        
-        // Longer delay between batches to ensure stability
-        if (i + CONCURRENT_REQUESTS < chunks.length) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Small delay between chunks to avoid rate limiting
+          if (i < chunks.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+          }
+          
+        } catch (chunkError) {
+          console.error(`Failed to process chunk ${i + 1}:`, chunkError);
+          throw new Error(`Translation failed on chunk ${i + 1}/${chunks.length}`);
         }
       }
     } catch (error) {

@@ -154,6 +154,106 @@ const options: OptionType[] = languageData.map((l) => ({
   countryCode: languageToCountry[l.label] || countryByLanguageFallback[l.code],
 }));
 
+// Function to convert language name to language code
+const getLanguageCode = (languageName: string): string => {
+  const languageCodeMap: Record<string, string> = {
+    // European languages
+    "English": "en",
+    "Spanish": "es",
+    "French": "fr",
+    "German": "de",
+    "Italian": "it",
+    "Portuguese": "pt",
+    "Russian": "ru",
+    "Polish": "pl",
+    "Dutch": "nl",
+    "Swedish": "sv",
+    "Norwegian": "no",
+    "Danish": "da",
+    "Finnish": "fi",
+    "Greek": "el",
+    "Czech": "cs",
+    "Slovak": "sk",
+    "Hungarian": "hu",
+    "Romanian": "ro",
+    "Bulgarian": "bg",
+    "Croatian": "hr",
+    "Serbian": "sr",
+    "Ukrainian": "uk",
+    "Lithuanian": "lt",
+    "Latvian": "lv",
+    "Estonian": "et",
+    "Slovenian": "sl",
+    "Macedonian": "mk",
+    "Albanian": "sq",
+    "Bosnian": "bs",
+    "Montenegrin": "cnr",
+    "Icelandic": "is",
+    "Maltese": "mt",
+    "Irish": "ga",
+    "Welsh": "cy",
+    "Catalan": "ca",
+    "Basque": "eu",
+    "Galician": "gl",
+    // Asian languages
+    "Chinese": "zh",
+    "Japanese": "ja",
+    "Korean": "ko",
+    "Arabic": "ar",
+    "Hindi": "hi",
+    "Turkish": "tr",
+    "Hebrew": "he",
+    "Thai": "th",
+    "Vietnamese": "vi",
+    "Bengali": "bn",
+    "Urdu": "ur",
+    "Punjabi": "pa",
+    "Tamil": "ta",
+    "Telugu": "te",
+    "Marathi": "mr",
+    "Gujarati": "gu",
+    "Kannada": "kn",
+    "Malayalam": "ml",
+    "Nepali": "ne",
+    "Sinhala": "si",
+    "Burmese": "my",
+    "Khmer": "km",
+    "Lao": "lo",
+    "Mongolian": "mn",
+    "Tibetan": "bo",
+    "Kazakh": "kk",
+    "Kyrgyz": "ky",
+    "Tajik": "tg",
+    "Turkmen": "tk",
+    "Uzbek": "uz",
+    "Armenian": "hy",
+    "Georgian": "ka",
+    "Azerbaijani": "az",
+    "Persian": "fa",
+    "Kurdish": "ku",
+    "Pashto": "ps",
+    // African languages
+    "Afrikaans": "af",
+    "Amharic": "am",
+    "Hausa": "ha",
+    "Swahili": "sw",
+    "Yoruba": "yo",
+    "Zulu": "zu",
+    "Xhosa": "xh",
+    "Somali": "so",
+    // Other languages
+    "Filipino": "fil",
+    "Tagalog": "tl",
+    "Indonesian": "id",
+    "Malay": "ms",
+    "Maori": "mi",
+    "Belarusian": "be",
+    "Moldovan": "ro", // Moldovan uses Romanian language code
+  };
+  
+  return languageCodeMap[languageName] || languageName.toLowerCase().replace(/\s+/g, '_');
+};
+
 export default function Home() {
   const [prompt, setPrompt] = useState("Creating a translation of the application, which serves as an information system for sports clubs and other sports organizations and entities.");
   const [file, setFile] = useState<File | null>(null);
@@ -221,7 +321,11 @@ export default function Home() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "translation.json";
+      
+      // Generate filename with language code
+      const languageCode = getLanguageCode(language);
+      a.download = `translation_${languageCode}.json`;
+      
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {

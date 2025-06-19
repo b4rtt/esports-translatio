@@ -104,14 +104,29 @@ Translates a JSON file to the specified language.
 
 ## Troubleshooting
 
-If you encounter deployment timeouts on Vercel:
-1. Ensure your JSON files have fewer than 150 keys (Vercel limit)
+## Vercel Deployment Limitations
+
+**Vercel Hobby Plan:**
+- Maximum 5 JSON keys per file
+- 60-second function timeout
+- Free tier limitations
+
+**Vercel Pro Plan ($20/month):**
+- Maximum 500+ JSON keys per file
+- 300-second function timeout
+- Much better for larger translations
+
+**Workarounds for Hobby Plan:**
+1. **Split large JSON files** into smaller chunks of 5 keys each
+2. **Use local development** for larger files (`npm run dev`)
+3. **Upgrade to Vercel Pro** for production use
+4. **Use the app multiple times** - translate 5 keys at a time and merge results
+
+**Troubleshooting:**
+1. Ensure your JSON files have max 5 keys for Hobby plan
 2. Check that your OpenAI API key is properly set in Vercel dashboard
-3. Verify you're using the latest deployment with Vercel optimizations
-4. For larger files, split them into smaller chunks manually (recommended: 50-100 keys max)
-5. Monitor Vercel function logs for progress updates
-6. Be patient - each small chunk takes ~30-60 seconds on Vercel
-7. Consider upgrading to Vercel Pro for better limits
+3. Monitor Vercel function logs for timeout issues
+4. Consider local development for larger files
 
 ## Learn More
 

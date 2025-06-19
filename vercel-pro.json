@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "src/app/api/translate/route.ts": {
+      "maxDuration": 300
+    }
+  },
+  "env": {
+    "OPENAI_API_KEY": "@openai-api-key"
+  }
+} 

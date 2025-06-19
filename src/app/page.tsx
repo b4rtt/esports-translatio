@@ -1,18 +1,32 @@
 "use client";
 import { useState } from "react";
+import Select from "react-select";
+import { languages as allLanguages, countries } from "countries-list";
+import * as FlagIcons from "country-flag-icons/react/3x2";
+const Flags = FlagIcons as Record<string, React.ComponentType<{ className?: string }>>;
 
-const languages = [
-  { code: "es", label: "Spanish" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "zh", label: "Chinese" },
-  { code: "ja", label: "Japanese" },
-];
+const languageData = Object.entries(allLanguages).map(([code, { name }]) => ({
+  code,
+  label: name,
+}));
+
+const countryByLanguage: Record<string, string | undefined> = {};
+for (const [cc, info] of Object.entries(countries)) {
+  (info.languages || []).forEach((l) => {
+    if (!countryByLanguage[l]) countryByLanguage[l] = cc;
+  });
+}
+
+const options = languageData.map((l) => ({
+  value: l.label,
+  label: l.label,
+  countryCode: countryByLanguage[l.code],
+}));
 
 export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [file, setFile] = useState<File | null>(null);
-  const [language, setLanguage] = useState(languages[0].label);
+  const [language, setLanguage] = useState(options[0].label);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -67,17 +81,22 @@ export default function Home() {
           onChange={(e) => setFile(e.target.files?.[0] || null)}
           className="block w-full text-sm"
         />
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="w-full border rounded-md p-2 bg-transparent"
-        >
-          {languages.map((l) => (
-            <option key={l.code} value={l.label} className="text-black dark:text-white">
-              {l.label}
-            </option>
-          ))}
-        </select>
+        <Select
+          options={options}
+          value={options.find((o) => o.label === language)}
+          onChange={(o) => o && setLanguage(o.label)}
+          isSearchable
+          className="text-black dark:text-white"
+          formatOptionLabel={(o) => {
+            const Flag = o.countryCode ? Flags[o.countryCode as keyof typeof Flags] : null;
+            return (
+              <div className="flex items-center gap-2">
+                {Flag && <Flag className="w-5 h-5" />}
+                <span>{o.label}</span>
+              </div>
+            );
+          }}
+        />
         <button
           type="submit"
           disabled={loading}

@@ -9,10 +9,13 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "countries-list": "^3.1.1",
+    "country-flag-icons": "^1.5.19",
     "next": "15.3.4",
     "openai": "^5.5.1",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-select": "^5.10.1"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

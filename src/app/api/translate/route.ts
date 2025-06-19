@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { type ChatCompletionMessageParam } from "openai/resources/chat/completions";
+import { type ChatCompletionMessageParam, type ChatCompletion } from "openai/resources/chat/completions";
 import { OpenAI } from "openai";
 
 // Vercel runtime configuration for Hobby plan
@@ -102,16 +102,17 @@ ${jsonChunk}`,
       console.log(`Sending chunk to OpenAI (${chunkJson.length} characters)`);
       
       try {
-        const completion = await Promise.race([
-          openai.chat.completions.create({
-            model: "gpt-4o-mini", // Use faster model
-            messages,
-            temperature: 0.1, // Lower temperature for consistent results
-          }),
-          new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("OpenAI request timeout after 2 minutes")), REQUEST_TIMEOUT)
-          )
-        ]) as any;
+        const completionPromise = openai.chat.completions.create({
+          model: "gpt-4o-mini", // Use faster model
+          messages,
+          temperature: 0.1, // Lower temperature for consistent results
+        });
+        
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error("OpenAI request timeout after 2 minutes")), REQUEST_TIMEOUT)
+        );
+        
+        const completion = await Promise.race([completionPromise, timeoutPromise]);
 
         let result = completion.choices[0]?.message?.content || "";
 

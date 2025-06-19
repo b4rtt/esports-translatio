@@ -317,7 +317,7 @@ export default function Home() {
         setError("File too large for Vercel Hobby plan. Please use a JSON file with max 5 keys, or upgrade to Vercel Pro for larger files.");
         return;
       }
-    } catch (parseError) {
+    } catch {
       setError("Invalid JSON file. Please check your file format.");
       return;
     }

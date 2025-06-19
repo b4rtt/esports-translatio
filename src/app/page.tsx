@@ -369,28 +369,38 @@ export default function Home() {
           onSubmit={handleSubmit}
           className="space-y-6 w-full max-w-md bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-slate-200/50 dark:border-slate-700/50 p-8 rounded-2xl shadow-xl"
         >
-        <textarea
-          className="w-full border rounded-md p-3 bg-transparent resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-          rows={3}
-          placeholder="Describe your app..."
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-        />
+        <div>
+          <label htmlFor="app-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Application Description:
+          </label>
+          <textarea
+            id="app-description"
+            className="w-full border rounded-md p-3 bg-transparent resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            rows={3}
+            placeholder="Describe your app..."
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+          />
+        </div>
         
         {/* Enhanced File Upload Area */}
-        <div
-          className={`relative border-2 border-dashed rounded-lg p-6 transition-all duration-200 cursor-pointer
-            ${isDragOver 
-              ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
-              : file 
-                ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
-                : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-            }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-          onClick={() => document.getElementById('file-input')?.click()}
-        >
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            JSON File:
+          </label>
+          <div
+            className={`relative border-2 border-dashed rounded-lg p-6 transition-all duration-200 cursor-pointer
+              ${isDragOver 
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+                : file 
+                  ? 'border-green-500 bg-green-50 dark:bg-green-900/20' 
+                  : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
+              }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById('file-input')?.click()}
+          >
           <input
             id="file-input"
             type="file"
@@ -440,9 +450,14 @@ export default function Home() {
               </div>
             )}
           </div>
+          </div>
         </div>
 
-        {isMounted ? (
+        <div>
+          <label htmlFor="language-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Target Language:
+          </label>
+          {isMounted ? (
           <Select
             instanceId="language-select"
             options={options}
@@ -480,6 +495,7 @@ export default function Home() {
         ) : (
           <div className="h-[42px] w-full border rounded-md bg-transparent animate-pulse" />
         )}
+        </div>
         
         <button
           type="submit"

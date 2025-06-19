@@ -60,13 +60,16 @@ Upload an i18n JSON file, describe your app, and pick a target language. The tra
 
 1. Push your code to GitHub/GitLab/Bitbucket
 2. Connect your repository to Vercel
-3. Add your `OPENAI_API_KEY` environment variable in Vercel dashboard
+3. **Add environment variable in Vercel dashboard:**
+   - Go to your project settings
+   - Click "Environment Variables"
+   - Add `OPENAI_API_KEY` with your OpenAI API key
+   - Set it for "Production", "Preview", and "Development"
 4. Deploy!
 
-The `vercel.json` configuration file is already set up for optimal performance with:
-- 5-minute function timeout for translation API (300 seconds)
-- 2-minute timeout per OpenAI request (120 seconds)
-- Proper environment variable configuration
+The `vercel.json` configuration file is set up for:
+- **Hobby Plan**: 60-second function timeout (max 5 JSON keys)
+- **Pro Plan**: Use `vercel-pro.json` for 300-second timeout (500+ keys)
 
 ### Manual Deployment
 

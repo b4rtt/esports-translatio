@@ -32,7 +32,24 @@ export async function POST(request: Request) {
       messages,
     });
 
-    const result = completion.choices[0]?.message?.content || "";
+    let result = completion.choices[0]?.message?.content || "";
+
+    try {
+      const parsed = JSON.parse(result);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        "GeneralTranslations" in parsed &&
+        Object.keys(parsed).length === 1
+      ) {
+        result = JSON.stringify(parsed["GeneralTranslations"], null, 2);
+      } else {
+        result = JSON.stringify(parsed, null, 2);
+      }
+    } catch {
+      // keep result as is if parsing fails
+    }
+
     return NextResponse.json({ result });
   } catch (error) {
     console.error(error);

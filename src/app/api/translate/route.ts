@@ -15,10 +15,20 @@ export async function POST(request: Request) {
 
     const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-    const messages: ChatCompletionMessageParam[] = [
-      {
-        role: "system",
-        content: `You are a professional translation assistant specializing in software localization and esports content. Your task is to translate JSON files while maintaining their structure and functionality.
+    function chunkObject(obj: Record<string, unknown>, size: number) {
+      const entries = Object.entries(obj);
+      const chunks = [] as Record<string, unknown>[];
+      for (let i = 0; i < entries.length; i += size) {
+        chunks.push(Object.fromEntries(entries.slice(i, i + size)));
+      }
+      return chunks;
+    }
+
+    function buildMessages(jsonChunk: string): ChatCompletionMessageParam[] {
+      return [
+        {
+          role: "system",
+          content: `You are a professional translation assistant specializing in software localization and esports content. Your task is to translate JSON files while maintaining their structure and functionality.
 
 CRITICAL RULES:
 1. ONLY translate string values (text content), NEVER translate keys or structural elements
@@ -37,44 +47,52 @@ ESPORTS CONTEXT:
 - Keep game-specific terms that are commonly used internationally
 - Translate UI elements appropriately for the gaming audience
 - Maintain professional tone suitable for sports organizations`
-      },
-      {
-        role: "user",
-        content: `Context: ${prompt}
+        },
+        {
+          role: "user",
+          content: `Context: ${prompt}
 
 Target Language: ${language}
 
 Please translate the following JSON content according to the rules above:
 
-${json}`,
-      },
-    ];
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o", // ChatGPT 4.1 (OpenAI gpt-4o model)
-      messages,
-    });
-
-
-    let result = completion.choices[0]?.message?.content || "";
-
-    // Clean up the response - remove markdown formatting and extra whitespace
-    result = result.trim();
-    result = result.replace(/^```json?\s*/, '').replace(/\s*```$/, '');
-    result = result.replace(/^```\s*/, '').replace(/\s*```$/, '');
-    
-    // Validate that we have valid JSON
-    try {
-      JSON.parse(result);
-    } catch (parseError) {
-      console.error("Invalid JSON from AI:", result, parseError);
-      return NextResponse.json(
-        { error: "AI returned invalid JSON format" },
-        { status: 422 }
-      );
+${jsonChunk}`,
+        },
+      ];
     }
 
-    return NextResponse.json({ result });
+    const data = JSON.parse(json);
+    const chunks = chunkObject(data, 100);
+    const combined: Record<string, unknown> = {};
+
+    for (const chunk of chunks) {
+      const chunkJson = JSON.stringify(chunk);
+      const messages = buildMessages(chunkJson);
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o", // ChatGPT 4.1 (OpenAI gpt-4o model)
+        messages,
+      });
+
+      let result = completion.choices[0]?.message?.content || "";
+
+      // Clean up the response - remove markdown formatting and extra whitespace
+      result = result.trim();
+      result = result.replace(/^```json?\s*/, '').replace(/\s*```$/, '');
+      result = result.replace(/^```\s*/, '').replace(/\s*```$/, '');
+
+      try {
+        const parsed = JSON.parse(result);
+        Object.assign(combined, parsed);
+      } catch (parseError) {
+        console.error("Invalid JSON from AI:", result, parseError);
+        return NextResponse.json(
+          { error: "AI returned invalid JSON format" },
+          { status: 422 }
+        );
+      }
+    }
+
+    return NextResponse.json({ result: JSON.stringify(combined, null, 2) });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: "Translation failed" }, { status: 500 });

@@ -307,7 +307,21 @@ export default function Home() {
       setError("Please upload a JSON file.");
       return;
     }
+    
+    // Validate file size (roughly estimate JSON complexity)
     const text = await file.text();
+    try {
+      const jsonData = JSON.parse(text);
+      const keyCount = Object.keys(jsonData).length;
+      if (keyCount > 1000) {
+        setError("File too large. Please use a JSON file with fewer than 1000 keys.");
+        return;
+      }
+    } catch (parseError) {
+      setError("Invalid JSON file. Please check your file format.");
+      return;
+    }
+    
     setLoading(true);
     try {
       const res = await fetch("/api/translate", {
@@ -315,8 +329,23 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ json: text, language, prompt }),
       });
-      if (!res.ok) throw new Error("Request failed");
+      
       const data = await res.json();
+      
+      if (!res.ok) {
+        // Handle specific error types
+        if (res.status === 408) {
+          setError("Translation timed out. Please try with a smaller file or split it into smaller chunks.");
+        } else if (res.status === 413) {
+          setError("File too large. Please use a smaller JSON file.");
+        } else if (res.status === 422) {
+          setError(data.error || "Translation failed. Please try again.");
+        } else {
+          setError(data.error || "Request failed. Please try again.");
+        }
+        return;
+      }
+      
       const blob = new Blob([data.result], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -330,7 +359,11 @@ export default function Home() {
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error(error);
-      setError("Translation failed");
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        setError("Network error. Please check your connection and try again.");
+      } else {
+        setError("Translation failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }

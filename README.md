@@ -50,7 +50,7 @@ Upload an i18n JSON file, describe your app, and pick a target language. The tra
 **Important Limitations:**
 - Maximum 1000 JSON keys per file (to prevent timeouts)
 - Files larger than this will be rejected with a helpful error message
-- Translation timeout is set to 60 seconds for reliability
+- Translation timeout is set to 2 minutes per request (5 minutes total)
 
 ## Deployment
 
@@ -62,7 +62,8 @@ Upload an i18n JSON file, describe your app, and pick a target language. The tra
 4. Deploy!
 
 The `vercel.json` configuration file is already set up for optimal performance with:
-- 60-second function timeout for translation API
+- 5-minute function timeout for translation API (300 seconds)
+- 2-minute timeout per OpenAI request (120 seconds)
 - Proper environment variable configuration
 
 ### Manual Deployment
@@ -105,6 +106,8 @@ If you encounter deployment timeouts:
 1. Ensure your JSON files have fewer than 1000 keys
 2. Check that your OpenAI API key is properly set
 3. Verify you're using the latest deployment with timeout optimizations
+4. For very large files, consider splitting them into smaller chunks manually
+5. Be patient - OpenAI API responses can take up to 2 minutes per chunk
 
 ## Learn More
 

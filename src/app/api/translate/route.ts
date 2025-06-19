@@ -3,8 +3,8 @@ import { type ChatCompletionMessageParam } from "openai/resources/chat/completio
 import { OpenAI } from "openai";
 
 // Add timeout configuration
-const REQUEST_TIMEOUT = 30000; // 30 seconds per request
-const MAX_RETRIES = 2;
+const REQUEST_TIMEOUT = 120000; // 2 minutes per request (120 seconds)
+const MAX_RETRIES = 1; // Keep retries minimal to save time
 
 export async function POST(request: Request) {
   try {
@@ -109,11 +109,11 @@ ${jsonChunk}`,
 
     const data = JSON.parse(json);
     
-    // Reduce chunk size for better performance and lower timeout risk
-    const chunks = chunkObject(data, 50);
+    // Optimize chunk size for 2-minute timeout
+    const chunks = chunkObject(data, 40); // Increased back to handle more keys per chunk
     
-    // Check if the request is too large
-    if (chunks.length > 20) {
+    // Check if the request is too large (increased with longer timeout)
+    if (chunks.length > 25) {
       return NextResponse.json(
         { error: "File too large. Please use a smaller JSON file (max ~1000 keys)." },
         { status: 413 }
@@ -123,24 +123,32 @@ ${jsonChunk}`,
     const combined: Record<string, unknown> = {};
 
     try {
-      // Process chunks with controlled concurrency to avoid rate limits
-      const CONCURRENT_REQUESTS = 3;
+      // Process chunks with more conservative concurrency
+      const CONCURRENT_REQUESTS = 2; // Reduced from 3 to 2
       
       for (let i = 0; i < chunks.length; i += CONCURRENT_REQUESTS) {
         const batch = chunks.slice(i, i + CONCURRENT_REQUESTS);
         
-        const results = await Promise.all(
+        // Process with timeout for the entire batch
+        const batchPromise = Promise.all(
           batch.map(chunk => translateChunkWithRetry(chunk))
         );
+        
+        const results = await Promise.race([
+          batchPromise,
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Batch timeout")), REQUEST_TIMEOUT)
+          )
+        ]) as any[];
         
         // Merge results
         results.forEach(result => {
           Object.assign(combined, result);
         });
         
-        // Small delay between batches to avoid rate limiting
+        // Longer delay between batches to ensure stability
         if (i + CONCURRENT_REQUESTS < chunks.length) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
     } catch (error) {

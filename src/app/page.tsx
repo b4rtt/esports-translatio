@@ -257,7 +257,7 @@ const getLanguageCode = (languageName: string): string => {
 export default function Home() {
   const [prompt, setPrompt] = useState("Creating a translation of the application, which serves as an information system for sports clubs and other sports organizations and entities.");
   const [file, setFile] = useState<File | null>(null);
-  const [language, setLanguage] = useState(options[0].label);
+  const [language, setLanguage] = useState(options.find(o => o.label === "English")?.label || options[0].label);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isMounted, setIsMounted] = useState(false);

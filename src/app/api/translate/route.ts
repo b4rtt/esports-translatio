@@ -150,15 +150,15 @@ ${jsonChunk}`,
 
     const data = JSON.parse(json);
     
-    // Create very small chunks for Vercel stability
-    const chunks = chunkObject(data, 5); // Even smaller chunks for Vercel
+    // Create reasonable chunks for Vercel Hobby plan (60s total)
+    const chunks = chunkObject(data, 20); // 20 keys per chunk should take ~15s each
     
     console.log(`Processing ${chunks.length} chunks for translation`);
     
-    // Very strict limit for Vercel Hobby plan (60s total)
-    if (chunks.length > 1) {
+    // Realistic limit for Vercel Hobby plan: 3-4 chunks × 15s = ~60s total
+    if (chunks.length > 3) {
       return NextResponse.json(
-        { error: "File too large for Vercel Hobby plan. Only 1 small chunk allowed (max ~5 keys). Upgrade to Pro plan for larger files." },
+        { error: `File too large for Vercel Hobby plan. ${chunks.length} chunks detected, max 3 allowed (~60 keys total). Split file or upgrade to Pro plan.` },
         { status: 413 }
       );
     }

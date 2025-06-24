@@ -199,10 +199,22 @@ const options: OptionType[] = languageData.map((l) => ({
 }));
 
 const modelOptions: ModelOption[] = [
-  { value: "gpt-4o-mini", label: "gpt-4o-mini (vysoká kvalita pro JSON překlady)" },
-  { value: "gpt-4o", label: "gpt-4o (nejvyšší kvalita pro JSON překlady)" },
-  { value: "gpt-4-turbo", label: "gpt-4-turbo (velmi dobrá kvalita pro JSON překlady)" },
-  { value: "gpt-3.5-turbo", label: "gpt-3.5-turbo (základní kvalita pro JSON překlady)" },
+  {
+    value: "gpt-4o-mini",
+    label: "gpt-4o-mini (vysoká kvalita pro JSON překlady, rychlý)",
+  },
+  {
+    value: "gpt-4o",
+    label: "gpt-4o (nejvyšší kvalita pro JSON překlady, střední rychlost)",
+  },
+  {
+    value: "gpt-4-turbo",
+    label: "gpt-4-turbo (velmi dobrá kvalita pro JSON překlady, střední rychlost)",
+  },
+  {
+    value: "gpt-3.5-turbo",
+    label: "gpt-3.5-turbo (základní kvalita pro JSON překlady, nejrychlejší)",
+  },
 ];
 
 // Function to convert language name to language code

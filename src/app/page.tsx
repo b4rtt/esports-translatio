@@ -262,6 +262,7 @@ export default function Home() {
   const [error, setError] = useState("");
   const [isMounted, setIsMounted] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [apiKey, setApiKey] = useState("");
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [success, setSuccess] = useState(false);
 
@@ -354,10 +355,11 @@ export default function Home() {
           const res = await fetch("/api/translate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              json: JSON.stringify(chunk), 
-              language, 
-              prompt 
+            body: JSON.stringify({
+              json: JSON.stringify(chunk),
+              language,
+              prompt,
+              apiKey
             }),
           });
           
@@ -464,6 +466,20 @@ export default function Home() {
             placeholder="Describe your app..."
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="api-key" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            OpenAI API Key:
+          </label>
+          <input
+            id="api-key"
+            type="password"
+            className="w-full border rounded-md p-3 bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+            placeholder="sk-..."
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
           />
         </div>
         

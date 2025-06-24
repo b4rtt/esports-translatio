@@ -12,19 +12,20 @@ const MAX_RETRIES = 0; // No retries to save time
 
 export async function POST(request: Request) {
   try {
-    const { json, language, prompt } = await request.json();
+    const { json, language, prompt, apiKey } = await request.json();
     
     // This API now expects a single SMALL chunk, not full JSON
 
-    if (!process.env.OPENAI_API_KEY) {
+    const resolvedKey = apiKey || process.env.OPENAI_API_KEY;
+    if (!resolvedKey) {
       return NextResponse.json(
-        { error: "Missing OPENAI_API_KEY" },
-        { status: 500 }
+        { error: "Missing OpenAI API key" },
+        { status: 400 }
       );
     }
 
-    const openai = new OpenAI({ 
-      apiKey: process.env.OPENAI_API_KEY,
+    const openai = new OpenAI({
+      apiKey: resolvedKey,
       timeout: REQUEST_TIMEOUT,
     });
 

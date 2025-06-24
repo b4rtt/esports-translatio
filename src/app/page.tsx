@@ -12,6 +12,45 @@ type OptionType = {
 
 const Flags = FlagIcons as Record<string, React.ComponentType<{ className?: string }>>;
 
+const REQUEST_TIMEOUT = 45000; // 45 seconds per request
+
+function buildMessages(jsonChunk: string, language: string, prompt: string) {
+  return [
+    {
+      role: "system",
+      content: `You are a professional translation assistant specializing in software localization and esports content. Your task is to translate JSON files while maintaining their structure and functionality.
+
+CRITICAL RULES:
+1. ONLY translate string values (text content), NEVER translate keys or structural elements
+2. Preserve ALL special characters, placeholders ({{variable}}, %s, {0}, etc.), HTML tags, and formatting
+3. Return ONLY valid JSON - no explanations, comments, or markdown formatting
+4. Maintain exact JSON structure, nesting, and array orders
+5. For technical terms, use established terminology in the target language
+6. Keep proper names, brand names, and technical identifiers untranslated
+7. Preserve URLs, email addresses, and file paths exactly as they are
+8. For empty strings or null values, keep them as-is
+9. Maintain consistent terminology throughout the translation
+10. Consider cultural context for esports and gaming terminology
+
+ESPORTS CONTEXT:
+- Use established esports terminology in the target language
+- Keep game-specific terms that are commonly used internationally
+- Translate UI elements appropriately for the gaming audience
+- Maintain professional tone suitable for sports organizations`,
+    },
+    {
+      role: "user",
+      content: `Context: ${prompt}
+
+Target Language: ${language}
+
+Please translate the following JSON content according to the rules above:
+
+${jsonChunk}`,
+    },
+  ];
+}
+
 const languageData = Object.entries(allLanguages).map(([code, { name }]) => ({
   code,
   label: name,
@@ -352,24 +391,50 @@ export default function Home() {
         console.log(`Processing chunk ${i + 1}/${chunks.length}`);
         
         try {
-          const res = await fetch("/api/translate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              json: JSON.stringify(chunk),
-              language,
-              prompt,
-              apiKey
-            }),
-          });
-          
+          const messages = buildMessages(
+            JSON.stringify(chunk),
+            language,
+            prompt
+          );
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(
+            () => controller.abort(),
+            REQUEST_TIMEOUT
+          );
+
+          const res = await fetch(
+            "https://api.openai.com/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${apiKey}`,
+              },
+              body: JSON.stringify({
+                model: "gpt-4o-mini",
+                messages,
+                temperature: 0.1,
+              }),
+              signal: controller.signal,
+            }
+          );
+          clearTimeout(timeoutId);
+
           const data = await res.json();
-          
+
           if (!res.ok) {
-            throw new Error(data.error || `Request failed for chunk ${i + 1}`);
+            throw new Error(
+              data.error?.message || `Request failed for chunk ${i + 1}`
+            );
           }
-          
-          const translatedChunk = JSON.parse(data.result);
+
+          let result = data.choices?.[0]?.message?.content || "";
+          result = result.trim();
+          result = result.replace(/^```json?\s*/, "").replace(/\s*```$/, "");
+          result = result.replace(/^```\s*/, "").replace(/\s*```$/, "");
+
+          const translatedChunk = JSON.parse(result);
           translatedChunks.push(translatedChunk);
           
           // Update progress

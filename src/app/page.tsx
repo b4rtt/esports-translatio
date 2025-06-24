@@ -15,6 +15,13 @@ type ModelOption = {
   label: string;
 };
 
+type TokenInfo = {
+  prompt: number;
+  completion: number;
+  total: number;
+  cost: number;
+};
+
 const Flags = FlagIcons as Record<string, React.ComponentType<{ className?: string }>>;
 
 const REQUEST_TIMEOUT = 120000; // 2 minutes per request
@@ -218,6 +225,13 @@ const modelOptions: ModelOption[] = [
   },
 ];
 
+const modelPricing: Record<string, { prompt: number; completion: number }> = {
+  "gpt-4o-mini": { prompt: 0.000005, completion: 0.000015 },
+  "gpt-4o": { prompt: 0.000005, completion: 0.000015 },
+  "gpt-4-turbo": { prompt: 0.00001, completion: 0.00003 },
+  "gpt-3.5-turbo": { prompt: 0.0000005, completion: 0.0000015 },
+};
+
 // Function to convert language name to language code
 const getLanguageCode = (languageName: string): string => {
   const languageCodeMap: Record<string, string> = {
@@ -330,6 +344,12 @@ export default function Home() {
   const [model, setModel] = useState(modelOptions[0].value);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [success, setSuccess] = useState(false);
+  const [tokenInfo, setTokenInfo] = useState<TokenInfo>({
+    prompt: 0,
+    completion: 0,
+    total: 0,
+    cost: 0,
+  });
 
   useEffect(() => {
     setIsMounted(true);
@@ -385,6 +405,7 @@ export default function Home() {
     e.preventDefault();
     setError("");
     setSuccess(false);
+    setTokenInfo({ prompt: 0, completion: 0, total: 0, cost: 0 });
     if (!file) {
       setError("Please upload a JSON file.");
       return;
@@ -405,6 +426,9 @@ export default function Home() {
       // Split JSON into small chunks (1 keys each)
       const chunks = chunkObject(jsonData, 1);
       console.log(`Splitting into ${chunks.length} chunks for translation`);
+
+      let promptTokens = 0;
+      let completionTokens = 0;
       
       // Initialize progress
       setProgress({ current: 0, total: chunks.length });
@@ -447,6 +471,11 @@ export default function Home() {
               throw new Error(data.error?.message || `Request failed for chunk ${index}`);
             }
 
+            if (data.usage) {
+              promptTokens += data.usage.prompt_tokens || 0;
+              completionTokens += data.usage.completion_tokens || 0;
+            }
+
             let result = data.choices?.[0]?.message?.content || "";
             result = result.trim();
             result = result.replace(/^```json?\s*/, "").replace(/\s*```$/, "");
@@ -487,6 +516,18 @@ export default function Home() {
       const combinedResult = translatedChunks.reduce((acc, chunk) => {
         return { ...acc, ...chunk };
       }, {});
+
+      const tokenTotal = promptTokens + completionTokens;
+      const pricing = modelPricing[model];
+      const cost = pricing
+        ? promptTokens * pricing.prompt + completionTokens * pricing.completion
+        : 0;
+      setTokenInfo({
+        prompt: promptTokens,
+        completion: completionTokens,
+        total: tokenTotal,
+        cost,
+      });
       
       // Download the result
       const blob = new Blob([JSON.stringify(combinedResult, null, 2)], { type: "application/json" });
@@ -830,12 +871,12 @@ export default function Home() {
         {(loading || success) && progress.total > 0 && (
           <div className="w-full space-y-2">
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
-              <div 
+              <div
                 className={`h-full transition-all duration-500 ease-out ${
                   success ? 'bg-green-500' : 'bg-[#f60]'
                 }`}
-                style={{ 
-                  width: `${Math.round((progress.current / progress.total) * 100)}%` 
+                style={{
+                  width: `${Math.round((progress.current / progress.total) * 100)}%`
                 }}
               />
             </div>
@@ -847,6 +888,12 @@ export default function Home() {
                 {progress.current}/{progress.total} chunks ({Math.round((progress.current / progress.total) * 100)}%)
               </span>
             </div>
+          </div>
+        )}
+
+        {success && tokenInfo.total > 0 && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+            {`${tokenInfo.total} tokens (~$${tokenInfo.cost.toFixed(4)})`}
           </div>
         )}
         

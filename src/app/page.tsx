@@ -17,7 +17,8 @@ type ModelOption = {
 
 const Flags = FlagIcons as Record<string, React.ComponentType<{ className?: string }>>;
 
-const REQUEST_TIMEOUT = 45000; // 45 seconds per request
+const REQUEST_TIMEOUT = 120000; // 2 minutes per request
+const MAX_RETRIES = 2; // retry slow requests
 
 function buildMessages(jsonChunk: string, language: string, prompt: string) {
   return [
@@ -409,63 +410,72 @@ export default function Home() {
       setProgress({ current: 0, total: chunks.length });
       
       const translatedChunks: Record<string, unknown>[] = [];
-      
+
+      async function translateChunkWithRetry(chunk: Record<string, unknown>, index: number): Promise<Record<string, unknown>> {
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+          try {
+            const messages = buildMessages(
+              JSON.stringify(chunk),
+              language,
+              prompt
+            );
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
+            const res = await fetch(
+              "https://api.openai.com/v1/chat/completions",
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${apiKey}`,
+                },
+                body: JSON.stringify({
+                  model,
+                  messages,
+                  temperature: 0.1,
+                }),
+                signal: controller.signal,
+              }
+            );
+            clearTimeout(timeoutId);
+
+            const data = await res.json();
+
+            if (!res.ok) {
+              throw new Error(data.error?.message || `Request failed for chunk ${index}`);
+            }
+
+            let result = data.choices?.[0]?.message?.content || "";
+            result = result.trim();
+            result = result.replace(/^```json?\s*/, "").replace(/\s*```$/, "");
+            result = result.replace(/^```\s*/, "").replace(/\s*```$/, "");
+
+            return JSON.parse(result);
+          } catch (error) {
+            if (attempt === MAX_RETRIES) {
+              throw error;
+            }
+            console.warn(`Chunk ${index} failed, retrying... (${attempt + 1}/${MAX_RETRIES})`);
+          }
+        }
+        throw new Error("Retry logic failed");
+      }
+
       // Process each chunk separately with progress
       for (let i = 0; i < chunks.length; i++) {
         const chunk = chunks[i];
         console.log(`Processing chunk ${i + 1}/${chunks.length}`);
-        
+
         try {
-          const messages = buildMessages(
-            JSON.stringify(chunk),
-            language,
-            prompt
-          );
-
-          const controller = new AbortController();
-          const timeoutId = setTimeout(
-            () => controller.abort(),
-            REQUEST_TIMEOUT
-          );
-
-          const res = await fetch(
-            "https://api.openai.com/v1/chat/completions",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${apiKey}`,
-              },
-              body: JSON.stringify({
-                model,
-                messages,
-                temperature: 0.1,
-              }),
-              signal: controller.signal,
-            }
-          );
-          clearTimeout(timeoutId);
-
-          const data = await res.json();
-
-          if (!res.ok) {
-            throw new Error(
-              data.error?.message || `Request failed for chunk ${i + 1}`
-            );
-          }
-
-          let result = data.choices?.[0]?.message?.content || "";
-          result = result.trim();
-          result = result.replace(/^```json?\s*/, "").replace(/\s*```$/, "");
-          result = result.replace(/^```\s*/, "").replace(/\s*```$/, "");
-
-          const translatedChunk = JSON.parse(result);
+          const translatedChunk = await translateChunkWithRetry(chunk, i + 1);
           translatedChunks.push(translatedChunk);
-          
+
           // Update progress
           setProgress({ current: i + 1, total: chunks.length });
           console.log(`Translation progress: ${i + 1}/${chunks.length}`);
-          
+
         } catch (chunkError) {
           console.error(`Failed to translate chunk ${i + 1}:`, chunkError);
           setError(`Translation failed on chunk ${i + 1}/${chunks.length}. ${chunkError instanceof Error ? chunkError.message : 'Unknown error'}`);

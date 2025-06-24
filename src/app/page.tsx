@@ -10,6 +10,11 @@ type OptionType = {
   countryCode: string | undefined;
 };
 
+type ModelOption = {
+  value: string;
+  label: string;
+};
+
 const Flags = FlagIcons as Record<string, React.ComponentType<{ className?: string }>>;
 
 const REQUEST_TIMEOUT = 45000; // 45 seconds per request
@@ -193,6 +198,13 @@ const options: OptionType[] = languageData.map((l) => ({
   countryCode: languageToCountry[l.label] || countryByLanguageFallback[l.code],
 }));
 
+const modelOptions: ModelOption[] = [
+  { value: "gpt-4o-mini", label: "gpt-4o-mini (vysoká kvalita pro JSON překlady)" },
+  { value: "gpt-4o", label: "gpt-4o (nejvyšší kvalita pro JSON překlady)" },
+  { value: "gpt-4-turbo", label: "gpt-4-turbo (velmi dobrá kvalita pro JSON překlady)" },
+  { value: "gpt-3.5-turbo", label: "gpt-3.5-turbo (základní kvalita pro JSON překlady)" },
+];
+
 // Function to convert language name to language code
 const getLanguageCode = (languageName: string): string => {
   const languageCodeMap: Record<string, string> = {
@@ -302,6 +314,7 @@ export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [apiKey, setApiKey] = useState("");
+  const [model, setModel] = useState(modelOptions[0].value);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [success, setSuccess] = useState(false);
 
@@ -412,7 +425,7 @@ export default function Home() {
                 Authorization: `Bearer ${apiKey}`,
               },
               body: JSON.stringify({
-                model: "gpt-4o-mini",
+                model,
                 messages,
                 temperature: 0.1,
               }),
@@ -546,6 +559,76 @@ export default function Home() {
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
           />
+        </div>
+
+        <div>
+          <label htmlFor="model-select" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            OpenAI Model:
+          </label>
+          {isMounted ? (
+          <Select
+            instanceId="model-select"
+            options={modelOptions}
+            value={modelOptions.find((m) => m.value === model)}
+            onChange={(m: ModelOption | null) => m && setModel(m.value)}
+            isSearchable
+            menuPlacement="auto"
+            className="text-black dark:text-white"
+            styles={{
+              control: (base, state) => ({
+                ...base,
+                borderRadius: '0.375rem',
+                borderColor: document.documentElement.classList.contains('dark') ? '#374151' : '#d1d5db',
+                backgroundColor: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+                minHeight: '42px',
+                boxShadow: state.isFocused ? (document.documentElement.classList.contains('dark') ? '0 0 0 1px #3b82f6' : '0 0 0 1px #3b82f6') : 'none',
+                '&:hover': {
+                  borderColor: document.documentElement.classList.contains('dark') ? '#4b5563' : '#9ca3af'
+                }
+              }),
+              menu: (base) => ({
+                ...base,
+                backgroundColor: document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff',
+                border: document.documentElement.classList.contains('dark') ? '1px solid #374151' : '1px solid #d1d5db',
+              }),
+              option: (base, state) => ({
+                ...base,
+                backgroundColor: state.isFocused
+                  ? (document.documentElement.classList.contains('dark') ? '#374151' : '#f3f4f6')
+                  : (document.documentElement.classList.contains('dark') ? '#1f2937' : '#ffffff'),
+                color: document.documentElement.classList.contains('dark') ? '#f9fafb' : '#111827',
+                '&:hover': {
+                  backgroundColor: document.documentElement.classList.contains('dark') ? '#374151' : '#f3f4f6',
+                }
+              }),
+              singleValue: (base) => ({
+                ...base,
+                color: document.documentElement.classList.contains('dark') ? '#f9fafb' : '#111827',
+              }),
+              input: (base) => ({
+                ...base,
+                color: document.documentElement.classList.contains('dark') ? '#f9fafb' : '#111827',
+              }),
+              placeholder: (base) => ({
+                ...base,
+                color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
+              }),
+              indicatorSeparator: (base) => ({
+                ...base,
+                backgroundColor: document.documentElement.classList.contains('dark') ? '#374151' : '#d1d5db',
+              }),
+              dropdownIndicator: (base) => ({
+                ...base,
+                color: document.documentElement.classList.contains('dark') ? '#9ca3af' : '#6b7280',
+                '&:hover': {
+                  color: document.documentElement.classList.contains('dark') ? '#f9fafb' : '#111827',
+                }
+              }),
+            }}
+          />
+        ) : (
+          <div className="h-[42px] w-full border rounded-md bg-transparent animate-pulse" />
+        )}
         </div>
         
         {/* Enhanced File Upload Area */}

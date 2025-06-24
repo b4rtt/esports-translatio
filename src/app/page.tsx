@@ -545,10 +545,7 @@ export default function Home() {
       // Show success state
       setSuccess(true);
       
-      // Reset success state after 3 seconds
-      setTimeout(() => {
-        setSuccess(false);
-      }, 3000);
+      // Keep success state until next translation
       
     } catch (error) {
       console.error(error);

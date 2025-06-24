@@ -132,6 +132,7 @@ Translates a JSON file to the specified language.
 2. Monitor Vercel function logs - you'll see "Processing chunk X/Y" progress
 3. Each chunk should complete in 3-5 seconds
 4. For very large files on Hobby plan, consider upgrading to Pro or use local development
+5. If a chunk fails with an `AbortError`, increase the timeout or retry the request
 
 ## Learn More
 

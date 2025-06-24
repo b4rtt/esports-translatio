@@ -24,11 +24,12 @@ A powerful JSON translation tool designed for esports and gaming applications. B
 npm install
 ```
 
-2. Set up environment variables:
+2. (Optional) Set up environment variables:
 ```bash
 # Create a .env.local file in the root directory
 echo "OPENAI_API_KEY=your_openai_api_key_here" > .env.local
 ```
+You can also enter the API key directly in the web interface if you prefer not to store it locally.
 
 3. Run the development server:
 ```bash
@@ -61,11 +62,12 @@ Upload an i18n JSON file, describe your app, and pick a target language. The tra
 
 1. Push your code to GitHub/GitLab/Bitbucket
 2. Connect your repository to Vercel
-3. **Add environment variable in Vercel dashboard:**
+3. **(Optional) Add environment variable in Vercel dashboard:**
    - Go to your project settings
    - Click "Environment Variables"
    - Add `OPENAI_API_KEY` with your OpenAI API key
    - Set it for "Production", "Preview", and "Development"
+   - Skip this if you prefer entering the key in the app
 4. Deploy!
 
 The `vercel.json` configuration file is set up for:
@@ -74,7 +76,7 @@ The `vercel.json` configuration file is set up for:
 
 ### Manual Deployment
 
-Make sure to set the following environment variables:
+Make sure to set the following environment variables (or provide the key in the UI):
 - `OPENAI_API_KEY`: Your OpenAI API key
 - `NODE_ENV`: Set to `production`
 
@@ -126,7 +128,7 @@ Translates a JSON file to the specified language.
 - Large files (500+ keys): Recommend Pro plan or local development
 
 **Troubleshooting:**
-1. Check that your OpenAI API key is properly set in Vercel dashboard
+1. Check that your OpenAI API key is provided (either in the Vercel dashboard or via the form)
 2. Monitor Vercel function logs - you'll see "Processing chunk X/Y" progress
 3. Each chunk should complete in 3-5 seconds
 4. For very large files on Hobby plan, consider upgrading to Pro or use local development

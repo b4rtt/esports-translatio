@@ -8,7 +8,16 @@ export const maxDuration = 60; // 60 seconds (Hobby plan limit)
 
 // Add timeout configuration for Vercel Hobby plan
 const REQUEST_TIMEOUT = 45000; // 45 seconds per request (must fit in 60s total)
-const MAX_RETRIES = 0; // No retries to save time
+const MAX_RETRIES = 2; // Retry if invalid JSON is returned
+
+function isValidJson(text: string): boolean {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -48,6 +57,7 @@ CRITICAL RULES:
 8. For empty strings or null values, keep them as-is
 9. Maintain consistent terminology throughout the translation
 10. Consider cultural context for esports and gaming terminology
+11. Verify the output is valid JSON using JSON.parse before sending. If it isn't valid, correct the JSON and provide only the fixed JSON
 
 ESPORTS CONTEXT:
 - Use established esports terminology in the target language
@@ -95,6 +105,9 @@ ${jsonChunk}`,
         result = result.replace(/^```json?\s*/, '').replace(/\s*```$/, '');
         result = result.replace(/^```\s*/, '').replace(/\s*```$/, '');
 
+        if (!isValidJson(result)) {
+          throw new Error('Invalid JSON returned');
+        }
         const parsed = JSON.parse(result);
         console.log(`Successfully translated chunk`);
         return parsed;
@@ -111,6 +124,9 @@ ${jsonChunk}`,
           return await translateChunk(chunk);
         } catch (error) {
           console.error(`Attempt ${attempt + 1} failed:`, error);
+          if (error instanceof Error && error.message.includes('Invalid JSON')) {
+            console.warn(`Invalid JSON received, regenerating chunk...`);
+          }
           if (attempt === MAX_RETRIES) {
             throw error;
           }

@@ -27,6 +27,15 @@ const Flags = FlagIcons as Record<string, React.ComponentType<{ className?: stri
 const REQUEST_TIMEOUT = 220000; // 2 minutes per request
 const MAX_RETRIES = 2; // retry slow requests
 
+function isValidJson(text: string): boolean {
+  try {
+    JSON.parse(text);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function buildMessages(jsonChunk: string, language: string, prompt: string) {
   return [
     {
@@ -44,6 +53,7 @@ CRITICAL RULES:
 8. For empty strings or null values, keep them as-is
 9. Maintain consistent terminology throughout the translation
 10. Consider cultural context for esports and gaming terminology
+11. Verify the output is valid JSON using JSON.parse before sending. If not valid, correct the JSON and send only the fixed result
 
 ESPORTS CONTEXT:
 - Use established esports terminology in the target language
@@ -481,10 +491,16 @@ export default function Home() {
             result = result.replace(/^```json?\s*/, "").replace(/\s*```$/, "");
             result = result.replace(/^```\s*/, "").replace(/\s*```$/, "");
 
+            if (!isValidJson(result)) {
+              throw new Error("Invalid JSON returned");
+            }
             return JSON.parse(result);
           } catch (error) {
             if (attempt === MAX_RETRIES) {
               throw error;
+            }
+            if (error instanceof Error && error.message.includes('Invalid JSON')) {
+              console.warn(`Invalid JSON received, retrying chunk...`);
             }
             console.warn(`Chunk ${index} failed, retrying... (${attempt + 1}/${MAX_RETRIES})`);
           }

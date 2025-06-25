@@ -24,7 +24,7 @@ type TokenInfo = {
 
 const Flags = FlagIcons as Record<string, React.ComponentType<{ className?: string }>>;
 
-const REQUEST_TIMEOUT = 120000; // 2 minutes per request
+const REQUEST_TIMEOUT = 220000; // 2 minutes per request
 const MAX_RETRIES = 2; // retry slow requests
 
 function buildMessages(jsonChunk: string, language: string, prompt: string) {
